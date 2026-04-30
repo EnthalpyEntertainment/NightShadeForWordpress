@@ -30,43 +30,99 @@ add_action('rest_api_init', function () {
     ));
 });
 
-function simple_file_upload(WP_REST_Request $request){
- $old  =  "";
-if($request["old_filr_url"]){
- $old  = $request["old_filr_url"];
-}else{
-        return new WP_REST_Response([
-        'success' => false,
-        'message' => "no old file name in request"
-    ], 200);
-}
+function simple_file_upload(WP_REST_Request $request) {
 
-    if (empty($_FILES['file'])) {
-        return new WP_REST_Response(['error' => 'No file uploaded'], 400);
+    // -------------------------
+    // OLD FILE URL (required)
+    // -------------------------
+    $old = "";
+
+    if ($request->get_param("old_file_url")) {
+        $old = $request->get_param("old_file_url");
+    } else {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => "no old file url in request"
+        ], 200);
     }
 
-    $file = $_FILES['file'];
+    // -------------------------
+    // NEW FILE URL (required)
+    // -------------------------
+    $file_url = $request->get_param("file_url");
 
+    if (empty($file_url)) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => "no new file url in request"
+        ], 200);
+    }
+
+    if (!filter_var($file_url, FILTER_VALIDATE_URL)) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => "invalid file url"
+        ], 400);
+    }
+
+    // -------------------------
+    // DOWNLOAD FILE
+    // -------------------------
+    $response = wp_remote_get($file_url);
+
+    if (is_wp_error($response)) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => "failed to fetch file"
+        ], 500);
+    }
+
+    $body = wp_remote_retrieve_body($response);
+
+    if (empty($body)) {
+        return new WP_REST_Response([
+            'success' => false,
+            'message' => "empty file content"
+        ], 500);
+    }
+
+    // -------------------------
+    // CREATE TARGET DIR
+    // -------------------------
     $upload_dir = wp_upload_dir();
-    $target_dir = $upload_dir['basedir'] . '/uploads/Converted';
+    $target_dir = $upload_dir['basedir'] . '/uploads/Converted/';
 
     if (!file_exists($target_dir)) {
         wp_mkdir_p($target_dir);
     }
 
-    // Generate safe filename
-    $filename = uniqid('upload_', true) . '-' . sanitize_file_name($file['name']);
+    // -------------------------
+    // GENERATE FILENAME
+    // -------------------------
+    $path_info = pathinfo(parse_url($file_url, PHP_URL_PATH));
+    $original_name = $path_info['basename'] ?? 'file.jpg';
+
+    $filename = uniqid('upload_', true) . '-' . sanitize_file_name($original_name);
     $path = $target_dir . $filename;
 
-    if (!move_uploaded_file($file['tmp_name'], $path)) {
-        return new WP_REST_Response(['error' => 'Upload failed'], 500);
-    }
+    // -------------------------
+    // SAVE FILE
+    // -------------------------
+    file_put_contents($path, $body);
 
-    //replace old refrences 
-    $new = wp_upload_dir()['baseurl'] . '/simple-uploads/' . $filename;
-    Replace_old_refrences($old,$new);
+    // -------------------------
+    // NEW PUBLIC URL
+    // -------------------------
+    $new = wp_upload_dir()['baseurl'] . '/uploads/Converted/' . $filename;
 
+    // -------------------------
+    // REPLACE REFERENCES
+    // -------------------------
+    Replace_old_refrences($old, $new);
 
+    // -------------------------
+    // RESPONSE
+    // -------------------------
     return new WP_REST_Response([
         'success' => true,
         'file' => $filename,
