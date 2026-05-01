@@ -48,3 +48,11 @@ function filter_images(WP_REST_Request $request) {
 
     return rest_ensure_response($results);
 }
+
+add_action('rest_api_init', function () {
+    register_rest_route('uploadNightShade/v1', '/getPosibleImages', array(
+        'methods'  => 'POST',
+        'callback' => 'filter_images',
+        'permission_callback' => 'check_api_password' 
+    ));
+});
