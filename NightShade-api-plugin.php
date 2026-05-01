@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Night Shade for wordpress
  * Description: Night Shade for wordpress
- * Version: 1.0.02
+ * Version: 1.0.03
  */
 //auto update
 require_once __DIR__ . '/plugin-update-checker-master/plugin-update-checker.php';
