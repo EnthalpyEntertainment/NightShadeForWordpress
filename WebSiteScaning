@@ -1,66 +1,50 @@
-function GetAllSiteImages(){
-$Configoptions = require_once __DIR__ . '/config.php';
 
-// Defaults
-$minWidth  = 1920;
-$minHeight = 1080;
+function filter_images(WP_REST_Request $request) {
 
-// Override if set in config
-if (isset($Configoptions['min_image_width'])) {
-    $minWidth = (int)$Configoptions['min_image_width'];
-}
+    $min_size = (int) $request->get_param('min_size');
+    $max_size = (int) $request->get_param('max_size');
+    $min_usage = (int) $request->get_param('min_usage');
 
-if (isset($Configoptions['min_image_height'])) {
-    $minHeight = (int)$Configoptions['min_image_height'];
-}
-
-    $usedImages = [];
-
-    // Get posts/pages
-    $posts = get_posts([
-        'post_type' => ['post', 'page'],
-        'posts_per_page' => -1
+    // 1. Get all image attachments
+    $images = get_posts([
+        'post_type'      => 'attachment',
+        'post_mime_type' => 'image',
+        'post_status'    => 'inherit',
+        'posts_per_page' => -1,
     ]);
 
-    foreach ($posts as $post) {
+    // 2. Build usage index (VERY IMPORTANT PART)
+    $usage_map = build_image_usage_map();
 
-        // --- Extract <img> URLs ---
-        preg_match_all('/<img[^>]+src="([^">]+)"/i', $post->post_content, $matches);
+    $results = [];
 
-        if (!empty($matches[1])) {
-            foreach ($matches[1] as $imgUrl) {
+    foreach ($images as $img) {
 
-                // Convert URL → attachment ID
-                $attachment_id = attachment_url_to_postid($imgUrl);
+        $file = get_attached_file($img->ID);
+        if (!$file || !file_exists($file)) continue;
 
-                if ($attachment_id) {
-                    $meta = wp_get_attachment_metadata($attachment_id);
+        $size = filesize($file);
 
-                    if (!empty($meta['width']) && !empty($meta['height'])) {
+        // usage count (how many times image appears in posts/meta)
+        $usage = $usage_map[$img->ID] ?? 0;
 
-                        // Filter by dimensions
-                        if ($meta['width'] >= $minWidth && $meta['height'] >= $minHeight) {
-                            $usedImages[] = $imgUrl;
-                        }
-                    }
-                }
-            }
-        }
+        // FILTERS
+        if ($min_size && $size < $min_size) continue;
+        if ($max_size && $size > $max_size) continue;
+        if ($min_usage && $usage < $min_usage) continue;
 
-        // --- Featured image ---
-        $thumb = get_post_thumbnail_id($post->ID);
+        $meta = wp_get_attachment_metadata($img->ID);
 
-        if ($thumb) {
-            $meta = wp_get_attachment_metadata($thumb);
-
-            if (!empty($meta['width']) && !empty($meta['height'])) {
-
-                if ($meta['width'] >= $minWidth && $meta['height'] >= $minHeight) {
-                    $usedImages[] = wp_get_attachment_url($thumb);
-                }
-            }
-        }
+        $results[] = [
+            'id'       => $img->ID,
+            'url'      => wp_get_attachment_url($img->ID),
+            'file'     => basename($file),
+            'size'     => $size,
+            'width'    => $meta['width'] ?? null,
+            'height'   => $meta['height'] ?? null,
+            'usage'    => $usage
+        ];
     }
 
-    return array_unique($usedImages);
+    return rest_ensure_response($results);
 }
