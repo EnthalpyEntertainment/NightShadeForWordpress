@@ -4,6 +4,9 @@
  * Description: Night Shade for wordpress
  * Version: 1.0.02
  */
+
+require_once __DIR__ . '/UpdateFromGithub.php';
+
     function check_api_password(WP_REST_Request $request) {
 
     $creds = include plugin_dir_path(__FILE__) . 'credentials.php';
