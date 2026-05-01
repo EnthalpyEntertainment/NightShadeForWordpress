@@ -1,4 +1,4 @@
-function GetAllSiteImages($minWidth = 1920, $minHeight = 1080){
+function GetAllSiteImages(){
 $Configoptions = require_once __DIR__ . '/config.php';
 
 // Defaults
