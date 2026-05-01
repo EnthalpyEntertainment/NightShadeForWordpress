@@ -1,0 +1,51 @@
+function GetAllSiteImages($minWidth = 1920, $minHeight = 1080){
+    $usedImages = [];
+
+    // Get posts/pages
+    $posts = get_posts([
+        'post_type' => ['post', 'page'],
+        'posts_per_page' => -1
+    ]);
+
+    foreach ($posts as $post) {
+
+        // --- Extract <img> URLs ---
+        preg_match_all('/<img[^>]+src="([^">]+)"/i', $post->post_content, $matches);
+
+        if (!empty($matches[1])) {
+            foreach ($matches[1] as $imgUrl) {
+
+                // Convert URL → attachment ID
+                $attachment_id = attachment_url_to_postid($imgUrl);
+
+                if ($attachment_id) {
+                    $meta = wp_get_attachment_metadata($attachment_id);
+
+                    if (!empty($meta['width']) && !empty($meta['height'])) {
+
+                        // Filter by dimensions
+                        if ($meta['width'] >= $minWidth && $meta['height'] >= $minHeight) {
+                            $usedImages[] = $imgUrl;
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Featured image ---
+        $thumb = get_post_thumbnail_id($post->ID);
+
+        if ($thumb) {
+            $meta = wp_get_attachment_metadata($thumb);
+
+            if (!empty($meta['width']) && !empty($meta['height'])) {
+
+                if ($meta['width'] >= $minWidth && $meta['height'] >= $minHeight) {
+                    $usedImages[] = wp_get_attachment_url($thumb);
+                }
+            }
+        }
+    }
+
+    return array_unique($usedImages);
+}
