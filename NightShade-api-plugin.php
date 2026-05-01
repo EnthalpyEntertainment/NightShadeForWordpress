@@ -4,8 +4,16 @@
  * Description: Night Shade for wordpress
  * Version: 1.0.02
  */
-
-require_once __DIR__ . '/UpdateFromGithub.php';
+//auto update
+require_once __DIR__ . '/plugin-update-checker-master/plugin-update-checker.php';
+use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
+$updateChecker = PucFactory::buildUpdateChecker(
+    'https://github.com/EnthalpyEntertainment/NightShadeForWordpress/',
+    __FILE__,
+    'nightshade-for-wordpress'
+);
+$updateChecker->setBranch('main');
+//auto update
 
     function check_api_password(WP_REST_Request $request) {
 
