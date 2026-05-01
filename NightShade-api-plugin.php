@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Night Shade for wordpress
  * Description: Night Shade for wordpress
- * Version: 1.0
+ * Version: 1.0.02
  */
     function check_api_password(WP_REST_Request $request) {
 
