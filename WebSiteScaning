@@ -1,10 +1,17 @@
 function GetAllSiteImages($minWidth = 1920, $minHeight = 1080){
 $Configoptions = require_once __DIR__ . '/config.php';
-if($Configoptions["min_image_width"]){
-$minWidth = $Configoptions["min_image_width"];
+
+// Defaults
+$minWidth  = 1920;
+$minHeight = 1080;
+
+// Override if set in config
+if (isset($Configoptions['min_image_width'])) {
+    $minWidth = (int)$Configoptions['min_image_width'];
 }
-if($Configoptions["min_image_height"]){
-$minHeight = $Configoptions["min_image_height"];
+
+if (isset($Configoptions['min_image_height'])) {
+    $minHeight = (int)$Configoptions['min_image_height'];
 }
 
     $usedImages = [];
